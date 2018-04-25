@@ -1,12 +1,37 @@
+var express = require('express');
+var bodyParser = require('body-parser');
+var expressErrorHandler = require('express-error-handler');
 var exec = require('child_process').exec;
 var bits = 440711666;
 var version = 1;
-var zero = 5;
-var node = ["163.180.117.30:3000"];
+var zero = 4;
+var node = [];
 var data = ["aaaa", "asdasd"];
 var nodeName = "jul";
 var isMining = false;
 var blockChain = [];
+var app = express();
+app.use(bodyParser.urlencoded({extended : false}));
+app.use(bodyParser.json());
+//var errorhandler = expressErrorHandler({
+//  static:{
+//    '404' : './public/404.html'
+//  }
+//});
+//app.use(expressErrorHandler.httpError(404));
+//app.use(errorhandler);
+app.post('/data',(req,res)=>{
+  let comeData = req.body.data;
+  data.push(comeData);
+  console.log(comeData);
+  let reciverList = [];
+  let dataSet = {
+    "data" : comeData,
+    "reciverList" : reciverList
+  };
+  io.emit("addData",dataSet);
+  res.send();
+});
 
 function addNode(ip) {
   var socket = require('socket.io-client')('http://' + ip);
@@ -14,6 +39,13 @@ function addNode(ip) {
     // 추후 블록 받았을 시 확인하는 거 짜서 넣을거임
     if(data1["previousBlockHash"]== blockChain[blockChain.length - 1]["blockHash"]){
       exec("ps -ef | grep MakeBlock | awk '{print $2}' | xargs kill -9", function(err, stdout, stderr) {
+        // 블록 확인하는거 넣고..
+        let temp = data1["data"];
+        for(var i =0; i< temp.length; i++) {
+          if(data.indexOf(temp[i])!=-1){
+            data.splice(data.indexOf(temp[i]),1);
+          }
+        }
         blockChain.push(data1);
         io.emit("findBlock", data1);
         console.log("get block from other Node");
@@ -26,7 +58,9 @@ function addNode(ip) {
     }
   });
   socket.on('addData', function(recieveData) {
+
     data.push(recieveData);
+    io.emit('addData',recieveData);
     console.log(data);
   });
   socket.on('peerConnected', function(blockChain1) {
@@ -44,7 +78,10 @@ function initConnect() {
 function mining(previous) {
   // 파이썬 코드 실행
   isMining = true;
-  datainMining = data;
+  let datainMining=[];
+  for(var i in data){
+    datainMining.push(data[i]);
+  }
   var options = {
     env: {
       "version": version,
@@ -84,7 +121,13 @@ function mining(previous) {
         blockChain.push(block)
         console.log("<------------------------------------------->");
         console.log(blockChain);
-        console.log("<------------------------------------------->")
+        console.log("<------------------------------------------->");
+        let temp = block["data"];
+        for(var i =0; i< temp.length; i++) {
+          if(data.indexOf(temp[i])!=-1){
+            data.splice(data.indexOf(temp[i]),1);
+          }
+        }
         io.emit("findBlock", block);
         isMining = false;
       }
@@ -108,8 +151,9 @@ io.on('connection', function(socket) {
     socket.emit("peerConnected", blockChain);
   }
 });
+app.listen(3030, () => console.log('Listening http on port: 3030'));
 initConnect();
 //if this is First Node, start function at bottom
-//mining("0000000000000000000000000000000000000000000000000000000000000000");
+mining("0000000000000000000000000000000000000000000000000000000000000000");
 
 setInterval(runMining, 1000);
