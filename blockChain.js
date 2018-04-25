@@ -25,6 +25,7 @@ app.post('/data',(req,res)=>{
   data.push(comeData);
   console.log(comeData);
   let reciverList = [];
+  reciverList.push(nodeName);
   let dataSet = {
     "data" : comeData,
     "reciverList" : reciverList
@@ -58,10 +59,12 @@ function addNode(ip) {
     }
   });
   socket.on('addData', function(recieveData) {
-
-    data.push(recieveData);
-    io.emit('addData',recieveData);
-    console.log(data);
+    if(recieveData["reciverList"].indexOf(nodeName)==-1){
+      data.push(recieveData["data"]);
+      recieveData["reciverList"].push(nodeName);
+      io.emit('addData',recieveData);
+      console.log(data);
+    }
   });
   socket.on('peerConnected', function(blockChain1) {
     blockChain = blockChain1;
