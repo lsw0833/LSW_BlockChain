@@ -25,3 +25,4 @@ if __name__ == "__main__":
     print(block.blockHash)
     print(block.time)
     print(block.previousBlockHash)
+    print(block.bits)

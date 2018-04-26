@@ -43,7 +43,7 @@ function addNode(ip) {
         // 블록이 유효한지, 유효하지않다면 그 블록 제외하는 법과 그 노드 제외
         var options = {
           env: {
-            "nonce" data1["block"]["nonce"],
+            "nonce" : data1["block"]["nonce"],
             "merkleHash":  data1["block"]["merkleHash"],
             "version": data1["block"]["version"],
             "blockHash": data1["block"]["blockHash"],
