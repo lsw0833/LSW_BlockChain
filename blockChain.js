@@ -37,27 +37,63 @@ app.post('/data',(req,res)=>{
 function addNode(ip) {
   var socket = require('socket.io-client')('http://' + ip);
   socket.on('findBlock', function(data1) {
-    // 추후 블록 받았을 시 확인하는 거 짜서 넣을거임
-    if(data1["previousBlockHash"]== blockChain[blockChain.length - 1]["blockHash"]){
+    if(data1["reciverList"].indexOf(nodeName)==-1){
       exec("ps -ef | grep MakeBlock | awk '{print $2}' | xargs kill -9", function(err, stdout, stderr) {
-        // 블록 확인하는거 넣고..
-        let temp = data1["data"];
-        for(var i =0; i< temp.length; i++) {
-          if(data.indexOf(temp[i])!=-1){
-            data.splice(data.indexOf(temp[i]),1);
+        let flag = false;
+        // 블록이 유효한지, 유효하지않다면 그 블록 제외하는 법과 그 노드 제외
+        var options = {
+          env: {
+            "nonce" data1["block"]["nonce"],
+            "merkleHash":  data1["block"]["merkleHash"],
+            "version": data1["block"]["version"],
+            "blockHash": data1["block"]["blockHash"],
+            "time": data1["block"]["time"],
+            "previousBlockHash": data1["block"]["previousBlockHash"],
+            "bits": data1["block"]["bits"],
           }
-        }
-        blockChain.push(data1);
-        io.emit("findBlock", data1);
-        console.log("get block from other Node");
-        console.log(data1);
-        setTimeout(() => {
-          console.log("delay 1sec");
-        }, 1000);
-        isMining = false;
+        };
+        exec('python ./CreateBlock/block/checkBlock.py', options, function(error, stdout, stderr) {
+          if (error) {} else {
+            console.log(stdout);
+            if(stdout == "true"){
+              flag = true;
+            }
+            if(flag){
+              if(data1["block"]["previousBlockHash"] == blockChain[blockChain.length-1]["blockHash"]){
+                let temp = data1["block"]["data"];
+                for(var i =0; i< temp.length; i++) {
+                  if(data.indexOf(temp[i])!=-1){
+                    data.splice(data.indexOf(temp[i]),1);
+                  }
+                }
+                blockChain.push(data1["block"]);
+                data1["reciverList"].push(nodeName);
+                io.emit("findBlock", data1);
+                console.log("get block from other Node");
+                console.log(data1);
+                setTimeout(() => {
+                  console.log("delay 1sec");
+                }, 1000);
+              }else{
+                let reciverList= [];
+                reciverList.push(nodeName);
+                let dataSet ={
+                  "chain" : blockChain,
+                  "reciverList" : reciverList
+                };
+                io.emit('syncBlockChain',dataSet);
+              }
+            }else{
+              // 블록 만든 노드 트랍
+
+            }
+            isMining = false;
+          }
+        });
       });
     }
   });
+  //여기에 전자서명 필요
   socket.on('addData', function(recieveData) {
     if(recieveData["reciverList"].indexOf(nodeName)==-1){
       data.push(recieveData["data"]);
@@ -66,9 +102,16 @@ function addNode(ip) {
       console.log(data);
     }
   });
-  socket.on('peerConnected', function(blockChain1) {
+  socket.on('connected', function(blockChain1) {
     blockChain = blockChain1;
     console.log(blockChain);
+  });
+  socket.on('syncBlockChain', function(blockChain1) {
+    if(blockChain1["reciverList"].indexOf(nodeName)==-1){
+      blockChain = blockChain1["chain"];
+      blockChain1["reciverList"].push(nodeName);
+      io.emit('syncBlockChain',blockChain1);
+    }
   });
 }
 
@@ -117,6 +160,7 @@ function mining(previous) {
         "blockHash": buf[3],
         "time": buf[4],
         "previousBlockHash": buf[5],
+        "bits" : buf[6],
         "data": datainMining,
         "MinerName": nodeName
       };
@@ -131,7 +175,13 @@ function mining(previous) {
             data.splice(data.indexOf(temp[i]),1);
           }
         }
-        io.emit("findBlock", block);
+        let reciverList = [];
+        reciverList.push(nodeName);
+        let dataSet = {
+          "block" : block,
+          "reciverList" : reciverList
+        };
+        io.emit("findBlock", dataSet);
         isMining = false;
       }
     }
@@ -151,7 +201,7 @@ io.on('connection', function(socket) {
   if (node.indexOf(socket.handshake.address.slice(7, socket.handshake.address.length) + ":3000") == -1) {
     addNode(socket.handshake.address.slice(7, socket.handshake.address.length) + ":3000");
     node.push(socket.handshake.address.slice(7, socket.handshake.address.length) + ":3000");
-    socket.emit("peerConnected", blockChain);
+    socket.emit("connected", blockChain);
   }
 });
 app.listen(3030, () => console.log('Listening http on port: 3030'));
