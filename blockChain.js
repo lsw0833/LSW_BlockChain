@@ -52,10 +52,9 @@ function addNode(ip) {
             "bits": data1["block"]["bits"],
           }
         };
-        exec('python ./CreateBlock/block/checkBlock.py', options, function(error, stdout, stderr) {
+        exec('python ./CreateBlock/block/CheckBlock.py', options, function(error, stdout, stderr) {
           if (error) {} else {
-            console.log(stdout);
-            if(stdout == "true"){
+            if(stdout.trim() == "true"){
               flag = true;
             }
             if(flag){

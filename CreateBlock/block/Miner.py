@@ -103,13 +103,12 @@ def getCurrentTarget(bits,count):
         result = result+"0"
     return result
 
-def checkBlockHash(nonce,version,previous,merkleHash,time,bits,blockHash1):
+def checkBlockHash(nonce,version,previous,merkleHash,time,bits,blockHash):
     ver = swapEndian(str(version))
     previousBlockHash = swapEndian(previous)
     merkleRootHash = swapEndian(merkleHash)
     time = swapEndian(delete0x(hex(time)))
     bits1 = swapEndian(delete0x(hex(bits)))
-    blockHash = ""
     headerHex = ""
     headerHex = ver + previousBlockHash + merkleRootHash + time + bits1 + swapEndian(delete0x(hex(nonce)))
     headerBin = headerHex.decode('hex')
