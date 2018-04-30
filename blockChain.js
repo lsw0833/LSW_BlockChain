@@ -23,7 +23,9 @@ app.use(bodyParser.json());
 app.post('/data',(req,res)=>{
   let comeData = req.body.data;
   data.push(comeData);
-  console.log(comeData);
+  console.log("***************************");
+  console.log("Data : " + comeData);
+  console.log("***************************");
   let reciverList = [];
   reciverList.push(nodeName);
   let dataSet = {
@@ -81,6 +83,7 @@ function addNode(ip) {
                   "reciverList" : reciverList
                 };
                 io.emit('syncBlockChain',dataSet);
+                console.log("Data synchronized by" + nodeName);
               }
             }else{
               // 블록 만든 노드 트랍
@@ -98,11 +101,15 @@ function addNode(ip) {
       data.push(recieveData["data"]);
       recieveData["reciverList"].push(nodeName);
       io.emit('addData',recieveData);
+      console.log("-------------------------------");
+      console.log("Add data");
       console.log(data);
+      console.log("-------------------------------");
     }
   });
   socket.on('connected', function(blockChain1) {
     blockChain = blockChain1;
+    console.log("----Connect-----");
     console.log(blockChain);
   });
   socket.on('syncBlockChain', function(blockChain1) {
@@ -166,6 +173,7 @@ function mining(previous) {
       if (blockChain.length == 0 || block["previousBlockHash"] != blockChain[blockChain.length - 1]["previousBlockHash"]) {
         blockChain.push(block)
         console.log("<------------------------------------------->");
+        console.log("Find blockhash");
         console.log(blockChain);
         console.log("<------------------------------------------->");
         let temp = block["data"];
@@ -205,7 +213,7 @@ io.on('connection', function(socket) {
 });
 app.listen(3030, () => console.log('Listening http on port: 3030'));
 initConnect();
-//if this is First Node, start function at bottom
+//if this is First Miner node, start function at bottom
 mining("0000000000000000000000000000000000000000000000000000000000000000");
 
 setInterval(runMining, 1000);
