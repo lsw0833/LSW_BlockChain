@@ -6,10 +6,12 @@ var bits = 440711666;
 var version = 1;
 var zero = 4;
 var node = [];
-var data = ["aaaa", "asdasd"];
-var nodeName = "jul";
+var data = [];
+var nodeName = "julia";
 var isMining = false;
 var blockChain = [];
+var recieveTXID = [];
+var syncLastBlockHash=[];
 var app = express();
 app.use(bodyParser.urlencoded({extended : false}));
 app.use(bodyParser.json());
@@ -21,37 +23,57 @@ app.use(bodyParser.json());
 //app.use(expressErrorHandler.httpError(404));
 //app.use(errorhandler);
 app.post('/data',(req,res)=>{
-  let comeData = req.body.data;
-  data.push(comeData);
+  let txID = req.body.TXID;
+  let txData = req.body.TXdata;
+  var newData = {TXID : txID, Txdata : txData};
   console.log("***************************");
-  console.log("Data : " + comeData);
+  console.log("Data : " + newData);
   console.log("***************************");
-  let reciverList = [];
-  reciverList.push(nodeName);
-  let dataSet = {
-    "data" : comeData,
-    "reciverList" : reciverList
-  };
-  io.emit("addData",dataSet);
+  data.push(newData);
+  console.log(data);
+  recieveTXID.push(newData["TXID"]);
+  io.emit("addData",newData);
   res.send();
 });
 
+function getRandomIntInclusive(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function deleteinData(list){
+  for(var i=0; i<list.length; i++){
+    for(var j=0; j<data.length; j++){
+      if(data[j]["TXID"]==list[i]["TXID"]){
+        data.splice(j,1);
+        j--;
+      }
+    }
+  }
+}
+function isinBlock(data1){
+  for(var i=0; i<blockChain.length; i++){
+    if(blockChain[i]["blockHash"]==data1["blockHash"]){
+      return true;
+    }
+  }
+  return false;
+}
 function addNode(ip) {
   var socket = require('socket.io-client')('http://' + ip);
   socket.on('findBlock', function(data1) {
-    if(data1["reciverList"].indexOf(nodeName)==-1){
+    if(!isinBlock(data1)){
       exec("ps -ef | grep MakeBlock | awk '{print $2}' | xargs kill -9", function(err, stdout, stderr) {
         let flag = false;
         // 블록이 유효한지, 유효하지않다면 그 블록 제외하는 법과 그 노드 제외
         var options = {
           env: {
-            "nonce" : data1["block"]["nonce"],
-            "merkleHash":  data1["block"]["merkleHash"],
-            "version": data1["block"]["version"],
-            "blockHash": data1["block"]["blockHash"],
-            "time": data1["block"]["time"],
-            "previousBlockHash": data1["block"]["previousBlockHash"],
-            "bits": data1["block"]["bits"],
+            "nonce" : data1["nonce"],
+            "merkleHash":  data1["merkleHash"],
+            "version": data1["version"],
+            "blockHash": data1["blockHash"],
+            "time": data1["time"],
+            "previousBlockHash": data1["previousBlockHash"],
+            "bits": data1["bits"],
           }
         };
         exec('python ./CreateBlock/block/CheckBlock.py', options, function(error, stdout, stderr) {
@@ -60,30 +82,21 @@ function addNode(ip) {
               flag = true;
             }
             if(flag){
-              if(data1["block"]["previousBlockHash"] == blockChain[blockChain.length-1]["blockHash"]){
-                let temp = data1["block"]["data"];
-                for(var i =0; i< temp.length; i++) {
-                  if(data.indexOf(temp[i])!=-1){
-                    data.splice(data.indexOf(temp[i]),1);
-                  }
-                }
-                blockChain.push(data1["block"]);
-                data1["reciverList"].push(nodeName);
+              if(data1["previousBlockHash"] == blockChain[blockChain.length-1]["blockHash"]){
+                let temp = data1["data"];
+                deleteinData(temp);
+                blockChain.push(data1);
                 io.emit("findBlock", data1);
                 console.log("get block from other Node");
                 console.log(data1);
-                setTimeout(() => {
-                  console.log("delay 1sec");
-                }, 1000);
+                var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
+                while(waitTill > new Date()){}
               }else{
-                let reciverList= [];
-                reciverList.push(nodeName);
-                let dataSet ={
-                  "chain" : blockChain,
-                  "reciverList" : reciverList
-                };
-                io.emit('syncBlockChain',dataSet);
-                console.log("Data synchronized by" + nodeName);
+                if(blockChain[blockChain.length-1]["blockHash"]!=data1["blockHash"] && blockChain[blockChain.length-1]["MinerName"]!=data1["MinerName"]){
+                  syncLastBlockHash.push(blockChain[blockChain.length-1]["blockHash"]);
+                  io.emit('syncBlockChain',blockChain);
+                  console.log("Data synchronized by " + nodeName);
+                }
               }
             }else{
               // 블록 만든 노드 트랍
@@ -97,9 +110,11 @@ function addNode(ip) {
   });
   //여기에 전자서명 필요
   socket.on('addData', function(recieveData) {
-    if(recieveData["reciverList"].indexOf(nodeName)==-1){
-      data.push(recieveData["data"]);
-      recieveData["reciverList"].push(nodeName);
+    if(recieveTXID.indexOf(recieveData.TXID)==-1){
+      var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
+      while(waitTill > new Date()){}
+      data.push(recieveData);
+      recieveTXID.push(recieveData.TXID);
       io.emit('addData',recieveData);
       console.log("-------------------------------");
       console.log("Add data");
@@ -108,15 +123,22 @@ function addNode(ip) {
     }
   });
   socket.on('connected', function(blockChain1) {
-    blockChain = blockChain1;
-    console.log("----Connect-----");
-    console.log(blockChain);
+    if(blockChain.length==0){
+      blockChain = blockChain1;
+      console.log("----Connect-----");
+      console.log(blockChain);
+    }
   });
   socket.on('syncBlockChain', function(blockChain1) {
-    if(blockChain1["reciverList"].indexOf(nodeName)==-1){
-      blockChain = blockChain1["chain"];
-      blockChain1["reciverList"].push(nodeName);
-      io.emit('syncBlockChain',blockChain1);
+    if(syncLastBlockHash.indexOf(blockChain1[blockChain1.length-1]["blockHash"])==-1){
+      exec("ps -ef | grep MakeBlock | awk '{print $2}' | xargs kill -9", function(err, stdout, stderr) {
+        var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
+        while(waitTill > new Date()){}
+        blockChain = blockChain1;
+        syncLastBlockHash.push(blockChain[blockChain.length-1]["blockHash"]);
+        io.emit('syncBlockChain',blockChain);
+        isMining = false;
+      });
     }
   });
 }
@@ -129,10 +151,13 @@ function initConnect() {
 
 function mining(previous) {
   // 파이썬 코드 실행
+  console.log("Run Mining at " + new Date().getTime());
   isMining = true;
   let datainMining=[];
+  let TXinMining=[];
   for(var i in data){
-    datainMining.push(data[i]);
+    datainMining.push(data[i].TXID);
+    TXinMining.push(data[i]);
   }
   var options = {
     env: {
@@ -160,15 +185,15 @@ function mining(previous) {
         }
       }
       let block = {
-        "nonce": buf[0],
-        "merkleHash": buf[1],
-        "version": buf[2],
-        "blockHash": buf[3],
-        "time": buf[4],
-        "previousBlockHash": buf[5],
-        "bits" : buf[6],
-        "data": datainMining,
-        "MinerName": nodeName
+        nonce: buf[0],
+        merkleHash: buf[1],
+        version: buf[2],
+        blockHash: buf[3],
+        time: buf[4],
+        previousBlockHash: buf[5],
+        bits : buf[6],
+        data: TXinMining,
+        MinerName: nodeName
       };
       if (blockChain.length == 0 || block["previousBlockHash"] != blockChain[blockChain.length - 1]["previousBlockHash"]) {
         blockChain.push(block)
@@ -177,18 +202,8 @@ function mining(previous) {
         console.log(blockChain);
         console.log("<------------------------------------------->");
         let temp = block["data"];
-        for(var i =0; i< temp.length; i++) {
-          if(data.indexOf(temp[i])!=-1){
-            data.splice(data.indexOf(temp[i]),1);
-          }
-        }
-        let reciverList = [];
-        reciverList.push(nodeName);
-        let dataSet = {
-          "block" : block,
-          "reciverList" : reciverList
-        };
-        io.emit("findBlock", dataSet);
+        deleteinData(temp);
+        io.emit("findBlock", block);
         isMining = false;
       }
     }
