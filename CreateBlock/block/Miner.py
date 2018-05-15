@@ -62,7 +62,7 @@ def calculateMerkleHash(data):
     return li[len(li)-1]
 
 def createBlock(version,previous,data,bits,count):
-    blockCreatedTime = int(time.time())
+    blockCreatedTime = int(time.time()*1000%1000000000)
     merkleHash = calculateMerkleHash(data)
     block = calculateBlockHash(version,previous,merkleHash,blockCreatedTime,bits,count)
     return Block(version,previous,bits,blockCreatedTime,data,block["nonce"],block["hash"],merkleHash)

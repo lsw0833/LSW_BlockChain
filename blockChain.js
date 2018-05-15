@@ -89,18 +89,14 @@ function addNode(ip) {
                 io.emit("findBlock", data1);
                 console.log("get block from other Node");
                 console.log(data1);
-                var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
-                while(waitTill > new Date()){}
               }else{
-                if(blockChain[blockChain.length-1]["blockHash"]!=data1["blockHash"] && blockChain[blockChain.length-1]["MinerName"]!=data1["MinerName"]){
                   syncLastBlockHash.push(blockChain[blockChain.length-1]["blockHash"]);
                   io.emit('syncBlockChain',blockChain);
                   console.log("Data synchronized by " + nodeName);
-                }
               }
             }else{
               // 블록 만든 노드 트랍
-
+              console.log("WTF");
             }
             isMining = false;
           }
@@ -111,8 +107,6 @@ function addNode(ip) {
   //여기에 전자서명 필요
   socket.on('addData', function(recieveData) {
     if(recieveTXID.indexOf(recieveData.TXID)==-1){
-      var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
-      while(waitTill > new Date()){}
       data.push(recieveData);
       recieveTXID.push(recieveData.TXID);
       io.emit('addData',recieveData);
@@ -132,8 +126,6 @@ function addNode(ip) {
   socket.on('syncBlockChain', function(blockChain1) {
     if(syncLastBlockHash.indexOf(blockChain1[blockChain1.length-1]["blockHash"])==-1){
       exec("ps -ef | grep MakeBlock | awk '{print $2}' | xargs kill -9", function(err, stdout, stderr) {
-        var waitTill = new Date(new Date().getTime() + getRandomIntInclusive(1,3) * 1000);
-        while(waitTill > new Date()){}
         blockChain = blockChain1;
         syncLastBlockHash.push(blockChain[blockChain.length-1]["blockHash"]);
         io.emit('syncBlockChain',blockChain);
