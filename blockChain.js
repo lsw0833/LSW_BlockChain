@@ -1,12 +1,13 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+var crypto = require('crypto');
 var expressErrorHandler = require('express-error-handler');
 var exec = require('child_process').exec;
 var bits = 440711666;
 var version = 1;
 var zero = 4;
 var node = [];
-var data = [];
+var data = ["Genesis"];
 var nodeName = "julia";
 var isMining = false;
 var blockChain = [];
@@ -24,7 +25,7 @@ app.use(bodyParser.json());
 //});
 //app.use(expressErrorHandler.httpError(404));
 //app.use(errorhandler);
-app.post('/data', (req, res) => {
+app.post('/dataShop',(req,res)=>{
   let txID = req.body.TXID;
   let txData = req.body.TXdata;
   var newData = {
@@ -32,7 +33,7 @@ app.post('/data', (req, res) => {
     Txdata: txData
   };
   console.log("***************************");
-  console.log("Data : " + newData);
+  console.log("Data : " + newData + "for data shop");
   console.log("***************************");
   data.push(newData);
   console.log(data);
@@ -40,7 +41,18 @@ app.post('/data', (req, res) => {
   io.emit("addData", newData);
   res.send();
 });
+app.post('/wallet',(req,res)=>{
+  let txID = req.body.TXID;
+  let txRealData = req.body.TXRealData;
+  let txDataHash = req.body.TXDataHash;
+  let publicKey = req.body.publicKey;
 
+  msg = crypto.publicDecrypt(publicKey, Buffer.from(encmsg, 'base64'));
+
+});
+app.get('/blockChain',(req,res)=>{
+  res.json({blockChain :blockChain});
+});
 function getRandomIntInclusive(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
