@@ -54,15 +54,15 @@ app.post('/wallet',(req,res)=>{
     var newData = {
       TXID: txID,
       Txdata: txRealData
-      console.log("***************************");
-      console.log("Data : " + newData + "for wallet");
-      console.log("***************************");
-      data.push(newData);
-      console.log(data);
-      recieveTXID.push(newData["TXID"]);
-      io.emit("addData", newData);
-      res.send();
     };
+    console.log("***************************");
+    console.log("Data : " + newData + "for wallet");
+    console.log("***************************");
+    data.push(newData);
+    console.log(data);
+    recieveTXID.push(newData["TXID"]);
+    io.emit("addData", newData);
+    res.send();
   }
 
 });
