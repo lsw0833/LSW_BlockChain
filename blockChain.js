@@ -1,6 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var crypto = require('crypto');
+var bs58 = require('bs58');
 var expressErrorHandler = require('express-error-handler');
 var exec = require('child_process').exec;
 var bits = 440711666;
@@ -44,10 +45,25 @@ app.post('/dataShop',(req,res)=>{
 app.post('/wallet',(req,res)=>{
   let txID = req.body.TXID;
   let txRealData = req.body.TXRealData;
-  let txDataHash = req.body.TXDataHash;
+  let txSignature = req.body.txSignature;
   let publicKey = req.body.publicKey;
 
-  msg = crypto.publicDecrypt(publicKey, Buffer.from(encmsg, 'base64'));
+  var temp = crypto.publicDecrypt(publicKey, Buffer.from(txSignature));
+
+  if(temp == txID){
+    var newData = {
+      TXID: txID,
+      Txdata: txRealData
+      console.log("***************************");
+      console.log("Data : " + newData + "for wallet");
+      console.log("***************************");
+      data.push(newData);
+      console.log(data);
+      recieveTXID.push(newData["TXID"]);
+      io.emit("addData", newData);
+      res.send();
+    };
+  }
 
 });
 app.get('/blockChain',(req,res)=>{
