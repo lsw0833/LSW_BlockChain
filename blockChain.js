@@ -31,7 +31,7 @@ app.post('/dataShop',(req,res)=>{
   let txData = req.body.TXdata;
   var newData = {
     TXID: txID,
-    Txdata: txData
+    TXData: txData
   };
   console.log("***************************");
   console.log("Data : " + newData + "for data shop");
@@ -53,7 +53,7 @@ app.post('/wallet',(req,res)=>{
   if(temp == txID){
     var newData = {
       TXID: txID,
-      Txdata: txRealData
+      TXData: txRealData
     };
     console.log("***************************");
     console.log("Data : " + newData + "for wallet");
